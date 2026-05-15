@@ -1,65 +1,105 @@
-import Image from "next/image";
+import { supabase } from '../lib/supabase'
+import Search from './Search'
 
-export default function Home() {
+async function getFilmy() {
+  const pages = await Promise.all(
+    [1,2,3,4,5,6,7,8,9,10].map(page =>
+      fetch(
+        'https://api.themoviedb.org/3/discover/movie?with_origin_country=SK&sort_by=popularity.desc&api_key=' + process.env.TMDB_API_KEY + '&page=' + page,
+        { cache: 'no-store' }
+      ).then(res => res.json())
+    )
+  )
+  const filmy = pages.flatMap(p => p.results ?? [])
+  const filmyWithCredits = await Promise.all(
+    filmy.map(async (film: any) => {
+      const credits = await fetch(
+        'https://api.themoviedb.org/3/movie/' + film.id + '/credits?api_key=' + process.env.TMDB_API_KEY,
+        { cache: 'no-store' }
+      ).then(res => res.json())
+      const director = credits.crew?.find((c: any) => c.job === 'Director')
+      return { ...film, director }
+    })
+  )
+  return filmyWithCredits
+}
+
+async function getHodnotenia() {
+  const { data } = await supabase.from('ratings').select('film_id, score')
+  return data ?? []
+}
+
+export default async function Home() {
+  const [filmy, hodnotenia] = await Promise.all([getFilmy(), getHodnotenia()])
+
+  const priemery: { [key: number]: { avg: number, count: number } } = {}
+  hodnotenia.forEach((h) => {
+    if (!priemery[h.film_id]) priemery[h.film_id] = { avg: 0, count: 0 }
+    priemery[h.film_id].avg += h.score
+    priemery[h.film_id].count += 1
+  })
+  Object.keys(priemery).forEach((id) => {
+    priemery[Number(id)].avg = priemery[Number(id)].avg / priemery[Number(id)].count
+  })
+
+  const featured = filmy[0]
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{background: '#0a0a0a', minHeight: '100vh', color: '#fff'}}>
+
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        padding: '20px 48px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)'
+      }}>
+        <div style={{fontSize: '24px', fontWeight: 'bold', letterSpacing: '4px', color: '#e8c97e'}}>
+          DSF
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div style={{display: 'flex', gap: '32px', fontSize: '14px', letterSpacing: '2px'}}>
+          <a href="/" style={{color: '#fff', textDecoration: 'none', opacity: 0.8}}>FILMY</a>
+          <a href="/rebricek" style={{color: '#e8c97e', textDecoration: 'none', fontWeight: 'bold'}}>REBRICEK</a>
         </div>
-      </main>
+      </nav>
+
+      {featured && (
+        <div style={{position: 'relative', height: '85vh', overflow: 'hidden'}}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: 'url(https://image.tmdb.org/t/p/original' + (featured.backdrop_path || featured.poster_path) + ')',
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            filter: 'brightness(0.4)'
+          }}/>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to right, rgba(0,0,0,0.95) 40%, transparent 100%)'
+          }}/>
+          <div style={{position: 'absolute', bottom: '80px', left: '48px', maxWidth: '500px'}}>
+            <p style={{color: '#e8c97e', letterSpacing: '3px', fontSize: '12px', marginBottom: '16px'}}>
+              ODPORUCANY FILM
+            </p>
+            <h1 style={{fontSize: '52px', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '16px'}}>
+              {featured.title}
+            </h1>
+            <p style={{color: 'rgba(255,255,255,0.7)', fontSize: '15px', lineHeight: 1.7, marginBottom: '24px'}}>
+              {featured.overview?.slice(0, 200)}...
+            </p>
+            <span style={{color: '#e8c97e', fontSize: '14px'}}>
+              {featured.release_date?.slice(0, 4)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div style={{padding: '48px'}}>
+        <h2 style={{
+          fontSize: '13px', letterSpacing: '4px', color: '#e8c97e',
+          marginBottom: '32px', fontFamily: 'sans-serif'
+        }}>
+          SLOVENSKA KINEMATOGRAFIA
+        </h2>
+        <Search filmy={filmy} priemery={priemery} />
+      </div>
     </div>
-  );
+  )
 }
