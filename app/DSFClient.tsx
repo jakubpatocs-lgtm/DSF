@@ -1,163 +1,434 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
+import Nav from './Nav'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-const GOLD = '#E8C97E'
-const MUTED = 'rgba(255,255,255,0.42)'
+const GOLD = '#C9A84C'
+const GOLD2 = '#F0D080'
+const MUTED = 'rgba(255,255,255,0.38)'
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#080808; color:#fff; font-family:'DM Sans',sans-serif; overflow-x:hidden; }
-  ::-webkit-scrollbar { width:4px; }
-  ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:rgba(232,201,126,0.3); border-radius:2px; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Outfit:wght@200;300;400;500;600&display=swap');
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    background: #04040a;
+    color: #f0ece4;
+    font-family: 'Outfit', sans-serif;
+    overflow-x: hidden;
+    cursor: default;
+  }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(32px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-  @keyframes shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
-  @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
-  .film-card { transition:transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94); }
-  .film-card:hover { transform:translateY(-10px) scale(1.025); }
-  .film-card:hover .card-overlay { opacity:1 !important; }
-  .film-card:hover .rate-btn-card { opacity:1 !important; transform:translateY(0) !important; }
-  .nav-link { position:relative; transition:color 0.3s; text-decoration:none; }
-  .nav-link::after { content:''; position:absolute; bottom:-4px; left:0; right:0; height:1px; background:#E8C97E; transform:scaleX(0); transition:transform 0.3s; }
-  .nav-link:hover::after, .nav-link.active::after { transform:scaleX(1); }
-  .search-box:focus { border-color:rgba(232,201,126,0.5) !important; box-shadow:0 0 0 3px rgba(232,201,126,0.07) !important; }
-  .genre-btn { transition:all 0.25s; cursor:pointer; font-family:'DM Sans'; }
-  .genre-btn:hover { background:rgba(232,201,126,0.15) !important; border-color:rgba(232,201,126,0.4) !important; }
-  .genre-btn.on { background:rgba(232,201,126,0.15) !important; border-color:#E8C97E !important; color:#E8C97E !important; }
-  .hero-cta { transition:all 0.25s; }
-  .hero-cta:hover { background:#fff !important; color:#000 !important; transform:translateY(-1px); }
-  .score-btn { transition:all 0.18s; cursor:pointer; }
-  .score-btn:hover { transform:scale(1.15); }
-  .modal-overlay { animation:fadeIn 0.2s ease; }
-  .modal-box { animation:fadeUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94); }
-  .toast-el { animation:slideDown 0.3s ease; }
-  .hero-slide { position:absolute; inset:0; transition:opacity 1.4s cubic-bezier(0.25,0.46,0.45,0.94); }
+  @keyframes scaleIn {
+    from { opacity:0; transform:scale(0.88) translateY(20px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+  @keyframes heroReveal {
+    0%   { opacity:0; transform:translateY(44px) scale(0.96); filter:blur(8px); }
+    100% { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+  }
+  @keyframes shimmerPulse {
+    0%,100% { opacity:0.4; transform:scaleX(0.8); }
+    50%     { opacity:1;   transform:scaleX(1); }
+  }
+  @keyframes orbFloat {
+    0%,100% { transform:translate(0,0) scale(1) rotate(0deg); }
+    25%     { transform:translate(60px,-40px) scale(1.1) rotate(90deg); }
+    50%     { transform:translate(-30px,60px) scale(0.9) rotate(180deg); }
+    75%     { transform:translate(40px,20px) scale(1.05) rotate(270deg); }
+  }
+  @keyframes lightSweep {
+    0%   { transform:translateX(-120%) skewX(-20deg); opacity:0; }
+    10%  { opacity:1; }
+    90%  { opacity:1; }
+    100% { transform:translateX(220%) skewX(-20deg); opacity:0; }
+  }
+  @keyframes progressFill {
+    from { width:0%; }
+    to   { width:100%; }
+  }
+  @keyframes glowPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
+    50%     { box-shadow: 0 0 40px 8px rgba(201,168,76,0.12); }
+  }
+  @keyframes toastIn {
+    from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.92); }
+    to   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+  }
+  @keyframes spin {
+    from { transform:rotate(0deg); }
+    to   { transform:rotate(360deg); }
+  }
+  @keyframes reviewIn {
+    from { opacity:0; transform:translateX(40px) scale(0.92); filter:blur(4px); }
+    to   { opacity:1; transform:translateX(0) scale(1); filter:blur(0); }
+  }
+  @keyframes popupMinimize {
+    from { opacity:1; transform:scale(1) translateY(0); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+
+  .glass-1 {
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .glass-2 {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(60px) saturate(220%) brightness(115%);
+    -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(115%);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .glass-gold {
+    background: rgba(201,168,76,0.08);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(201,168,76,0.22);
+  }
+
+  .hero-wrapper {
+    position: relative; height: 100vh; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    transition: opacity 1.8s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .hero-bg img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.35) saturate(1.5);
+    transition: transform 9s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .hero-bg.active img { transform: scale(1.08); }
+  .hero-bg.inactive { opacity: 0; }
+  .hero-bg.inactive img { transform: scale(1); }
+
+  .fc {
+    position: relative; cursor: pointer;
+    transform: translateY(0) scale(1);
+    transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .fc:hover { transform: translateY(-14px) scale(1.02); z-index: 10; }
+  .fc .fc-img {
+    width: 100%; aspect-ratio: 2/3; object-fit: cover;
+    border-radius: 14px;
+    transition: all 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .fc:hover .fc-img {
+    box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,76,0.2);
+  }
+  .fc .fc-sweep {
+    position: absolute; inset: 0; border-radius: 14px; overflow: hidden;
+    pointer-events: none; z-index: 2;
+  }
+  .fc .fc-sweep::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.08) 50%, transparent 65%);
+    transform: translateX(-100%);
+  }
+  .fc:hover .fc-sweep::after {
+    animation: lightSweep 0.8s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+  }
+  .fc .fc-overlay {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: linear-gradient(to top, rgba(4,4,10,0.98) 0%, rgba(4,4,10,0.4) 50%, transparent 100%);
+    opacity: 0.65;
+    transition: opacity 0.5s;
+  }
+  .fc:hover .fc-overlay { opacity: 1; }
+  .fc .fc-info {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 16px;
+    transform: translateY(5px); opacity: 0.85;
+    transition: all 0.45s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .fc:hover .fc-info { transform: translateY(0); opacity: 1; }
+  .fc .fc-rate {
+    width: 100%; margin-top: 10px; padding: 9px;
+    background: rgba(201,168,76,0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 10px; color: ${GOLD2};
+    font-size: 11px; font-weight: 500; letter-spacing: 1px;
+    cursor: pointer; font-family: 'Outfit', sans-serif;
+    opacity: 0; transform: translateY(8px);
+    transition: all 0.35s cubic-bezier(0.34,1.2,0.64,1);
+    position: relative; overflow: hidden;
+  }
+  .fc .fc-rate::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    transform: translateX(-100%);
+  }
+  .fc:hover .fc-rate { opacity: 1; transform: translateY(0); }
+  .fc:hover .fc-rate:hover {
+    background: rgba(201,168,76,0.2);
+    border-color: rgba(201,168,76,0.5);
+    transform: translateY(-1px);
+  }
+  .fc:hover .fc-rate:hover::before { animation: lightSweep 0.6s ease forwards; }
+
+  .sb {
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    cursor: pointer; font-family: 'Outfit', sans-serif;
+  }
+  .sb:hover { transform: scale(1.25) translateY(-2px); }
+  .sb.sel { animation: glowPulse 2s ease infinite; }
+
+  .arrow-glass {
+    width: 50px; height: 50px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer; border: none;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.8);
+    transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    position: relative; overflow: hidden;
+  }
+  .arrow-glass::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .arrow-glass:hover {
+    background: rgba(201,168,76,0.15);
+    border-color: rgba(201,168,76,0.45);
+    color: ${GOLD2};
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(201,168,76,0.2), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .arrow-glass:hover::before { opacity: 1; }
+  .arrow-glass:active { transform: scale(0.94); }
+
+  .dsf-search {
+    width: 100%; padding: 18px 24px 18px 56px;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; color: #f0ece4; font-size: 15px;
+    outline: none; font-family: 'Outfit', sans-serif; font-weight: 300;
+    transition: all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .dsf-search:focus {
+    border-color: rgba(201,168,76,0.4);
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 0 0 4px rgba(201,168,76,0.06), 0 16px 48px rgba(0,0,0,0.3);
+  }
+  .dsf-search::placeholder { color: rgba(255,255,255,0.2); }
+
+  .hero-dot {
+    height: 3px; border-radius: 2px; border: none; cursor: pointer; padding: 0;
+    transition: all 0.5s cubic-bezier(0.34,1.2,0.64,1);
+    position: relative; overflow: hidden;
+    background: rgba(255,255,255,0.2);
+  }
+  .hero-dot.active { background: rgba(201,168,76,0.3); }
+  .hero-dot .dot-fill {
+    position: absolute; top: 0; left: 0; height: 100%;
+    background: linear-gradient(to right, ${GOLD}, ${GOLD2});
+    border-radius: 2px;
+    animation: progressFill 6s linear both;
+  }
+
+  .stat-glass {
+    text-align: center; padding: 32px 24px;
+    background: rgba(255,255,255,0.02);
+    position: relative; overflow: hidden;
+    transition: all 0.4s ease;
+  }
+  .stat-glass::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 70%);
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .stat-glass:hover::before { opacity: 1; }
+  .stat-glass:hover { background: rgba(255,255,255,0.04); }
+
+  .modal-bg { animation: fadeIn 0.25s ease; }
+  .modal-box { animation: scaleIn 0.35s cubic-bezier(0.34,1.1,0.64,1); }
+  .dsf-toast { animation: toastIn 0.4s cubic-bezier(0.34,1.2,0.64,1); }
+  .hero-text { animation: heroReveal 0.9s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+
+  .rating-badge {
+    position: absolute; top: 10px; right: 10px; z-index: 3;
+    background: rgba(201,168,76,0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 8px; padding: 5px 9px;
+    font-size: 11px; font-weight: 600; color: #000;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    overflow: hidden;
+  }
+  .rating-badge::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 60%);
+  }
+
+  /* ── POPUP ── */
+  .review-popup {
+    position: fixed; right: 32px; bottom: 80px; z-index: 400;
+    background: rgba(8,6,18,0.85);
+    backdrop-filter: blur(40px) saturate(220%);
+    -webkit-backdrop-filter: blur(40px) saturate(220%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+    animation: reviewIn 0.5s cubic-bezier(0.34,1.1,0.64,1) both;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.34,1.1,0.64,1);
+    overflow: hidden;
+  }
+  .review-popup.expanded {
+    width: 300px;
+    padding: 18px 20px;
+  }
+  .review-popup.minimized {
+    width: auto;
+    padding: 10px 16px;
+    border-radius: 100px;
+    background: rgba(8,6,18,0.92);
+    border-color: rgba(201,168,76,0.25);
+  }
+  .review-popup:hover {
+    border-color: rgba(201,168,76,0.3);
+    box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 20px rgba(201,168,76,0.08), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
 `
 
+/* ─────────────── RATING MODAL ─────────────── */
 function RatingModal({ film, onClose, onSave }: {
   film: any
   onClose: () => void
-  onSave: (filmId: number, score: number, recenzia: string) => Promise<void>
+  onSave: (id: number, score: number, text: string) => Promise<void>
 }) {
   const [score, setScore] = useState(0)
-  const [recenzia, setRecenzia] = useState('')
+  const [text, setText] = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
 
-  async function handleSave() {
+  async function submit() {
     if (!score) return
     setSaving(true)
-    await onSave(film.id, score, recenzia)
+    await onSave(film.id, score, text)
     setSaving(false)
     setDone(true)
-    setTimeout(onClose, 1800)
+    setTimeout(onClose, 2000)
   }
 
   return (
     <div
-      className="modal-overlay"
+      className="modal-bg"
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.85)',
-        backdropFilter: 'blur(14px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
+        background: 'rgba(0,0,0,0.8)',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
       }}
     >
       <div
-        className="modal-box"
+        className="modal-box glass-2"
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'rgba(15,15,15,0.99)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 20, padding: '38px 40px',
-          maxWidth: 460, width: '100%',
+          borderRadius: 28, padding: '44px 46px',
+          maxWidth: 480, width: '100%',
+          boxShadow: '0 64px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.12)',
+          position: 'relative', overflow: 'hidden',
         }}
       >
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+          background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent)',
+        }} />
+
         {done ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: 50, marginBottom: 16, color: GOLD }}>✓</div>
-            <p style={{ fontFamily: "'Playfair Display'", fontSize: 20, marginBottom: 8 }}>Hodnotenie uložené!</p>
-            <p style={{ color: MUTED, fontSize: 14 }}>{film.title} — {score}/10</p>
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
+              background: 'rgba(201,168,76,0.15)', border: '2px solid rgba(201,168,76,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 32, animation: 'scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+            }}>✓</div>
+            <p style={{ fontFamily: "'Cormorant Garamond'", fontSize: 26, color: GOLD2, marginBottom: 8 }}>Uložené</p>
+            <p style={{ color: MUTED, fontSize: 13 }}>{film.title} · {score}/10</p>
           </div>
         ) : (
           <>
-            <p style={{ color: MUTED, fontSize: 10, letterSpacing: 3, marginBottom: 8, textTransform: 'uppercase' }}>Hodnotenie</p>
-            <h2 style={{ fontFamily: "'Playfair Display'", fontSize: 24, marginBottom: 26, lineHeight: 1.2 }}>{film.title}</h2>
-            <p style={{ color: MUTED, fontSize: 11, marginBottom: 12, letterSpacing: 1 }}>VYBER SKÓRE (1–10)</p>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 26, flexWrap: 'wrap' }}>
+            <p style={{ color: GOLD, fontSize: 9, letterSpacing: 4, marginBottom: 10, textTransform: 'uppercase', fontWeight: 500 }}>Tvoje hodnotenie</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond'", fontSize: 28, fontWeight: 600, marginBottom: 30, lineHeight: 1.2 }}>{film.title}</h2>
+
+            <p style={{ color: MUTED, fontSize: 9, letterSpacing: 3, marginBottom: 14 }}>SKÓRE</p>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 28, flexWrap: 'wrap' }}>
               {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                <button
-                  key={n}
-                  className={`score-btn${score === n ? ' on' : ''}`}
-                  onClick={() => setScore(n)}
-                  style={{
-                    width: 36, height: 36, borderRadius: 9,
-                    border: `1px solid ${score === n ? GOLD : 'rgba(255,255,255,0.1)'}`,
-                    background: score === n ? 'rgba(232,201,126,0.18)' : 'rgba(255,255,255,0.04)',
-                    color: score === n ? GOLD : MUTED,
-                    fontWeight: '600', fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans'",
-                  }}
-                >{n}</button>
+                <button key={n} className={`sb${score===n?' sel':''}`} onClick={() => setScore(n)} style={{
+                  width: 40, height: 40, borderRadius: 10,
+                  border: `1px solid ${score===n ? GOLD : 'rgba(255,255,255,0.1)'}`,
+                  background: score===n ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.03)',
+                  color: score===n ? GOLD2 : MUTED,
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: score===n ? `0 0 20px rgba(201,168,76,0.25), inset 0 1px 0 rgba(255,255,255,0.15)` : 'none',
+                }}>{n}</button>
               ))}
             </div>
 
             {score > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ color: MUTED, fontSize: 11, marginBottom: 10, letterSpacing: 1 }}>RECENZIA (NEPOVINNÁ)</p>
-                <textarea
-                  value={recenzia}
-                  onChange={e => setRecenzia(e.target.value)}
-                  placeholder="Napíš svoju recenziu..."
-                  rows={3}
+              <div style={{ marginBottom: 24, animation: 'fadeUp 0.3s ease both' }}>
+                <p style={{ color: MUTED, fontSize: 9, letterSpacing: 3, marginBottom: 10 }}>RECENZIA (NEPOVINNÁ)</p>
+                <textarea value={text} onChange={e => setText(e.target.value)}
+                  placeholder="Napíš svoju recenziu..." rows={3}
                   style={{
-                    width: '100%', padding: '12px 16px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 12, color: '#fff', fontSize: 14,
-                    resize: 'none', outline: 'none', fontFamily: "'DM Sans'",
-                    lineHeight: 1.6, boxSizing: 'border-box',
+                    width: '100%', padding: '14px 16px',
+                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 14, color: '#f0ece4', fontSize: 13, resize: 'none',
+                    outline: 'none', fontFamily: 'Outfit, sans-serif', lineHeight: 1.7,
+                    boxSizing: 'border-box', backdropFilter: 'blur(10px)',
+                    transition: 'border-color 0.3s',
                   }}
                 />
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                className="hero-cta"
-                onClick={handleSave}
-                disabled={!score || saving}
-                style={{
-                  flex: 1, padding: 14,
-                  background: score ? GOLD : 'rgba(255,255,255,0.06)',
-                  color: score ? '#000' : 'rgba(255,255,255,0.25)',
-                  border: 'none', borderRadius: 12,
-                  fontWeight: '700', fontSize: 14,
-                  cursor: score ? 'pointer' : 'not-allowed',
-                  fontFamily: "'DM Sans'",
-                }}
-              >{saving ? 'Ukladám...' : 'Uložiť hodnotenie'}</button>
-              <button
-                onClick={onClose}
-                style={{
-                  padding: '14px 20px',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: MUTED,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 12, cursor: 'pointer',
-                  fontSize: 14, fontFamily: "'DM Sans'",
-                }}
-              >Zrušiť</button>
+              <button onClick={submit} disabled={!score||saving} style={{
+                flex: 1, padding: 15,
+                background: score ? `linear-gradient(135deg, ${GOLD}, ${GOLD2})` : 'rgba(255,255,255,0.05)',
+                color: score ? '#000' : 'rgba(255,255,255,0.2)',
+                border: 'none', borderRadius: 14,
+                fontWeight: 600, fontSize: 13, cursor: score ? 'pointer' : 'not-allowed',
+                fontFamily: 'Outfit, sans-serif', letterSpacing: 0.5,
+                boxShadow: score ? '0 8px 24px rgba(201,168,76,0.3)' : 'none',
+                transition: 'all 0.3s',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                {saving ? '...' : 'Uložiť'}
+              </button>
+              <button onClick={onClose} style={{
+                padding: '15px 20px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+                color: MUTED, borderRadius: 14, cursor: 'pointer',
+                fontSize: 13, fontFamily: 'Outfit, sans-serif',
+                backdropFilter: 'blur(10px)', transition: 'all 0.2s',
+              }}>Zrušiť</button>
             </div>
           </>
         )}
@@ -166,359 +437,431 @@ function RatingModal({ film, onClose, onSave }: {
   )
 }
 
+/* ─────────────── FILM CARD ─────────────── */
 function FilmCard({ film, priemer, userRating, onRate, delay }: {
   film: any
   priemer?: { avg: number; count: number }
   userRating?: number
-  onRate: (film: any) => void
+  onRate: (f: any) => void
   delay: number
 }) {
-  const [hovered, setHovered] = useState(false)
-  // ✅ OPRAVENÉ: zobrazí rating iba z DSF databázy, nie z TMDB
-  const displayRating = priemer ? priemer.avg.toFixed(1) : null
-
   return (
     <div
-      className="film-card"
-      style={{ animation: `fadeUp 0.55s ease both`, animationDelay: `${delay}ms` }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="fc"
+      style={{ animation: `fadeUp 0.6s cubic-bezier(0.25,0.46,0.45,0.94) both`, animationDelay: `${delay}ms` }}
       onClick={() => window.location.href = `/film/${film.id}`}
     >
-      <div style={{ position: 'relative', borderRadius: 13, overflow: 'hidden', aspectRatio: '2/3', background: '#111', cursor: 'pointer' }}>
-        {film.poster_path ? (
-          <img
-            src={`https://image.tmdb.org/t/p/w300${film.poster_path}`}
-            alt={film.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+      <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden' }}>
+        {film.poster_path || film.backdrop_path ? (
+          <img className="fc-img" src={`https://image.tmdb.org/t/p/w300${film.poster_path || film.backdrop_path}`} alt={film.title} />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: '#1a1a1a' }} />
+          <div style={{ width:'100%', aspectRatio:'2/3', background:'rgba(255,255,255,0.03)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
+            <span style={{ fontSize:32, opacity:0.2 }}>🎬</span>
+            <p style={{ color:'rgba(255,255,255,0.15)', fontSize:11, textAlign:'center', padding:'0 12px', lineHeight:1.4 }}>{film.title}</p>
+          </div>
         )}
 
-        <div
-          className="card-overlay"
-          style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)',
-            opacity: hovered ? 1 : 0.72, transition: 'opacity 0.4s',
-          }}
-        />
+        <div className="fc-sweep" />
+        <div className="fc-overlay" />
 
-        {displayRating && (
-          <div style={{
-            position: 'absolute', top: 10, right: 10,
-            background: 'rgba(232,201,126,0.95)', color: '#000',
-            fontWeight: '700', fontSize: 11,
-            padding: '4px 8px', borderRadius: 7,
-          }}>★ {displayRating}</div>
-        )}
+        {priemer && <div className="rating-badge">★ {priemer.avg.toFixed(1)}</div>}
 
         {priemer && (
           <div style={{
-            position: 'absolute', top: 10, left: 10,
-            background: 'rgba(0,0,0,0.7)', color: GOLD,
-            fontSize: 10, padding: '3px 7px', borderRadius: 6,
-          }}>DSF {priemer.count}x</div>
+            position: 'absolute', top: 10, left: 10, zIndex: 3,
+            background: 'rgba(4,4,10,0.6)', backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(201,168,76,0.18)',
+            borderRadius: 6, padding: '3px 8px',
+            fontSize: 9, color: GOLD, letterSpacing: 1, fontWeight: 500,
+          }}>DSF {priemer.count}×</div>
         )}
 
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14,
-          transform: hovered ? 'translateY(0)' : 'translateY(4px)',
-          opacity: hovered ? 1 : 0.9, transition: 'all 0.4s cubic-bezier(0.25,0.46,0.45,0.94)',
-        }}>
-          {film.genre_ids?.[0] && (
-            <div style={{
-              display: 'inline-block',
-              background: 'rgba(232,201,126,0.12)',
-              border: '1px solid rgba(232,201,126,0.25)',
-              color: GOLD, fontSize: 8, letterSpacing: 2,
-              padding: '2px 7px', borderRadius: 5, marginBottom: 7,
-              textTransform: 'uppercase',
-            }}>SK Film</div>
-          )}
-          <p style={{ fontSize: 13, fontWeight: '600', marginBottom: 3, lineHeight: 1.3 }}>{film.title}</p>
-          {film.director && (
-            <p style={{ color: GOLD, fontSize: 11 }}>{film.director.name}</p>
-          )}
-          <p style={{ color: MUTED, fontSize: 10, marginTop: 2 }}>{film.release_date?.slice(0, 4)}</p>
-          {userRating && (
-            <p style={{ color: '#4ade80', fontSize: 10, marginTop: 5 }}>✓ Tvoje: {userRating}/10</p>
-          )}
-          <button
-            className="rate-btn-card"
-            onClick={e => { e.stopPropagation(); onRate(film) }}
-            style={{
-              marginTop: 10, width: '100%', padding: '7px',
-              background: 'rgba(232,201,126,0.12)',
-              border: '1px solid rgba(232,201,126,0.35)',
-              color: GOLD, borderRadius: 8, fontSize: 11,
-              cursor: 'pointer', fontFamily: "'DM Sans'", fontWeight: '500',
-              opacity: 0, transform: 'translateY(6px)', transition: 'all 0.3s',
-            }}
-          >{userRating ? 'Zmeniť hodnotenie' : '+ Ohodnoť'}</button>
+        <div className="fc-info" style={{ zIndex: 3 }}>
+          <div style={{
+            display: 'inline-block', marginBottom: 6,
+            background: 'rgba(201,168,76,0.1)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(201,168,76,0.2)',
+            borderRadius: 4, padding: '2px 7px',
+            fontSize: 8, color: GOLD, letterSpacing: 2, textTransform: 'uppercase',
+          }}>SK</div>
+          <p style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.3, marginBottom: 3 }}>{film.title}</p>
+          {film.director && <p style={{ color: GOLD, fontSize: 10, fontWeight: 400 }}>{film.director.name}</p>}
+          <p style={{ color: MUTED, fontSize: 10, marginTop: 2 }}>{film.release_date?.slice(0,4)}</p>
+          {userRating && <p style={{ color: '#6ee7b7', fontSize: 9, marginTop: 5, letterSpacing: 1 }}>✓ TVOJE: {userRating}/10</p>}
         </div>
       </div>
+
+      <button className="fc-rate" onClick={e => { e.stopPropagation(); onRate(film) }}>
+        {userRating ? '✎ ZMENIŤ HODNOTENIE' : '+ OHODNOŤ'}
+      </button>
     </div>
   )
 }
 
-export default function DSFClient({ filmy, priemery }: {
+/* ─────────────── MAIN ─────────────── */
+export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], heroFilmy, requireAuth = false }: {
   filmy: any[]
   priemery: { [key: number]: { avg: number; count: number } }
+  recenzie?: { film_id: number; film_title: string; score: number; recenzia: string }[]
+  heroFilmy?: any[]
+  requireAuth?: boolean
 }) {
   const [search, setSearch] = useState('')
   const [heroIdx, setHeroIdx] = useState(0)
-  const [scrolled, setScrolled] = useState(false)
-  const [ratingModal, setRatingModal] = useState<any>(null)
-  const [userRatings, setUserRatings] = useState<{ [key: number]: number }>({})
+  const [heroKey, setHeroKey] = useState(0)
+  const [modal, setModal] = useState<any>(null)
+  const [userRatings, setUserRatings] = useState<{ [k: number]: number }>({})
   const [toast, setToast] = useState<string | null>(null)
   const [localPriemery, setLocalPriemery] = useState(priemery)
+  const intervalRef = useRef<any>(null)
+  const [popupIdx, setPopupIdx] = useState(0)
+  const [popupVisible, setPopupVisible] = useState(true)
+  const [popupMinimized, setPopupMinimized] = useState(false)
+  const intervalRef2 = useRef<any>(null)
 
-  const heroFilms = filmy.slice(0, 4)
+  const heroFilms = heroFilmy && heroFilmy.length > 0
+    ? heroFilmy
+    : filmy.filter(f => f.backdrop_path || f.poster_path).slice(0, 5)
+
   const featured = heroFilms[heroIdx]
 
-  useEffect(() => {
-    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroFilms.length), 6000)
-    return () => clearInterval(t)
+  const goTo = useCallback((idx: number) => {
+    setHeroIdx(idx)
+    setHeroKey(k => k + 1)
+    clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(() => {
+      setHeroIdx(i => (i + 1) % heroFilms.length)
+      setHeroKey(k => k + 1)
+    }, 6000)
   }, [heroFilms.length])
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60)
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    intervalRef.current = setInterval(() => {
+      setHeroIdx(i => (i + 1) % heroFilms.length)
+      setHeroKey(k => k + 1)
+    }, 6000)
+    return () => clearInterval(intervalRef.current)
+  }, [heroFilms.length])
 
-  const filtered = filmy.filter(f =>
-    f.title?.toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => {
+    if (recenzie.length === 0) return
+    intervalRef2.current = setInterval(() => {
+      if (popupMinimized) return
+      setPopupVisible(false)
+      setTimeout(() => {
+        setPopupIdx(i => (i + 1) % recenzie.length)
+        setPopupVisible(true)
+      }, 500)
+    }, 5000)
+    return () => clearInterval(intervalRef2.current)
+  }, [recenzie.length, popupMinimized])
 
-  async function handleSaveRating(filmId: number, score: number, recenzia: string) {
+  const filtered = filmy.filter(f => f.title?.toLowerCase().includes(search.toLowerCase()))
+
+  async function handleSave(filmId: number, score: number, recenzia: string) {
     await supabase.from('ratings').insert({
       film_id: filmId,
       film_title: filmy.find(f => f.id === filmId)?.title,
-      score,
-      recenzia: recenzia.trim() || null,
+      score, recenzia: recenzia.trim() || null,
     })
     setUserRatings(r => ({ ...r, [filmId]: score }))
     setLocalPriemery(prev => {
       const old = prev[filmId]
       if (!old) return { ...prev, [filmId]: { avg: score, count: 1 } }
-      const newCount = old.count + 1
-      const newAvg = (old.avg * old.count + score) / newCount
-      return { ...prev, [filmId]: { avg: newAvg, count: newCount } }
+      const c = old.count + 1
+      return { ...prev, [filmId]: { avg: (old.avg * old.count + score) / c, count: c } }
     })
     const title = filmy.find(f => f.id === filmId)?.title
-    setToast(`Hodnotenie pre "${title}" uložené!`)
-    setTimeout(() => setToast(null), 3000)
+    setToast(`"${title}" hodnotené!`)
+    setTimeout(() => setToast(null), 3200)
   }
 
-  const ratingCount = Object.keys(userRatings).length + Object.keys(priemery).length
-  const allRatingVals = Object.values(userRatings)
-  const avgScore = allRatingVals.length
-    ? (allRatingVals.reduce((a, b) => a + b, 0) / allRatingVals.length).toFixed(1)
+  const totalRatings = Object.values(localPriemery).reduce((a, b) => a + b.count, 0)
+  const myRatings = Object.keys(userRatings).length
+  const myAvg = myRatings
+    ? (Object.values(userRatings).reduce((a,b)=>a+b,0)/myRatings).toFixed(1)
     : '—'
+
+  const currentRecenzia = recenzie[popupIdx]
 
   return (
     <>
       <style>{css}</style>
-      <div style={{ background: '#080808', minHeight: '100vh', color: '#fff' }}>
 
-        {/* NAV */}
-        <nav style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-          padding: '0 40px', height: 62,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: scrolled ? 'rgba(8,8,8,0.93)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(20px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
-          transition: 'all 0.4s',
-        }}>
-          <div style={{ fontFamily: "'Playfair Display'", fontSize: 21, fontWeight: 700, color: GOLD, letterSpacing: 6 }}>DSF</div>
-          <div style={{ display: 'flex', gap: 32, fontSize: 11, letterSpacing: 2 }}>
-            <a href="/" className="nav-link active" style={{ color: GOLD }}>FILMY</a>
-            <a href="/rebricek" className="nav-link" style={{ color: MUTED }}>REBRÍČEK</a>
+      <Nav count={filmy.length} />
+
+      <div style={{ background: '#04040a', minHeight: '100vh' }}>
+
+        {/* ── HERO ── */}
+        <div className="hero-wrapper">
+
+          <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:1 }}>
+            <div style={{
+              position:'absolute', width:700, height:700, borderRadius:'50%',
+              background:'radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%)',
+              top:'10%', left:'55%', animation:'orbFloat 20s ease-in-out infinite',
+            }} />
+            <div style={{
+              position:'absolute', width:500, height:500, borderRadius:'50%',
+              background:'radial-gradient(circle, rgba(80,60,180,0.05) 0%, transparent 70%)',
+              top:'30%', left:'10%', animation:'orbFloat 26s ease-in-out infinite reverse',
+            }} />
           </div>
-        </nav>
 
-        {/* HERO */}
-        <div style={{ position: 'relative', height: '88vh', overflow: 'hidden' }}>
           {heroFilms.map((f, i) => (
-            <div
-              key={f.id}
-              className="hero-slide"
-              style={{ opacity: i === heroIdx ? 1 : 0, zIndex: 0 }}
-            >
-              <img
-                src={`https://image.tmdb.org/t/p/original${f.backdrop_path || f.poster_path}`}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.28) saturate(1.2)' }}
-              />
+            <div key={f.id} className={`hero-bg ${i === heroIdx ? 'active' : 'inactive'}`} style={{ zIndex: 0 }}>
+              <img src={`https://image.tmdb.org/t/p/original${f.backdrop_path || f.poster_path}`} alt="" />
             </div>
           ))}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,rgba(8,8,8,1) 0%,rgba(8,8,8,0.7) 45%,transparent 78%)', zIndex: 1 }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(8,8,8,1) 0%,transparent 38%)', zIndex: 1 }} />
+
+          <div style={{ position:'absolute', inset:0, zIndex:2, background:'linear-gradient(110deg, rgba(4,4,10,0.98) 0%, rgba(4,4,10,0.65) 50%, rgba(4,4,10,0.2) 100%)' }} />
+          <div style={{ position:'absolute', inset:0, zIndex:2, background:'linear-gradient(to top, rgba(4,4,10,1) 0%, transparent 45%)' }} />
+
+          <div style={{
+            position:'absolute', inset:0, zIndex:3, pointerEvents:'none', opacity:0.025,
+            backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            backgroundSize: '200px',
+          }} />
 
           {featured && (
-            <div style={{ position: 'absolute', bottom: 90, left: 56, maxWidth: 520, zIndex: 2, animation: 'fadeUp 1s ease both' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(232,201,126,0.1)', border: '1px solid rgba(232,201,126,0.22)', borderRadius: 8, padding: '6px 14px', marginBottom: 18 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'shimmer 2s ease infinite', display: 'inline-block' }} />
-                <span style={{ color: GOLD, fontSize: 10, letterSpacing: 3, fontWeight: 500 }}>ODPORÚČANÝ FILM</span>
+            <div key={heroKey} style={{ position:'absolute', bottom:110, left:64, maxWidth:580, zIndex:10 }}>
+              <div className="hero-text" style={{ animationDelay:'0ms' }}>
+                <div style={{
+                  display:'inline-flex', alignItems:'center', gap:8,
+                  background:'rgba(201,168,76,0.08)',
+                  backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+                  border:'1px solid rgba(201,168,76,0.22)',
+                  borderRadius:100, padding:'7px 16px', marginBottom:22,
+                  boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)',
+                }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:GOLD2, animation:'shimmerPulse 2.5s ease infinite', display:'inline-block' }} />
+                  <span style={{ color:GOLD, fontSize:9, letterSpacing:3, fontWeight:500 }}>ODPORÚČANÝ FILM</span>
+                </div>
               </div>
-              <h1 style={{ fontFamily: "'Playfair Display'", fontSize: 'clamp(32px,4.5vw,58px)', fontWeight: 700, lineHeight: 1.08, marginBottom: 18, letterSpacing: -1 }}>
-                {featured.title}
-              </h1>
-              <p style={{ color: 'rgba(255,255,255,0.62)', fontSize: 14, lineHeight: 1.75, marginBottom: 24, maxWidth: 400 }}>
-                {featured.overview?.slice(0, 200)}{featured.overview?.length > 200 ? '...' : ''}
+
+              <h1 className="hero-text" style={{
+                fontFamily:"'Cormorant Garamond', serif",
+                fontSize:'clamp(36px,5.5vw,68px)',
+                fontWeight:600, lineHeight:1.0, letterSpacing:-1,
+                marginBottom:20, animationDelay:'70ms',
+                textShadow:'0 2px 40px rgba(0,0,0,0.5)',
+              }}>{featured.title}</h1>
+
+              <p className="hero-text" style={{
+                color:'rgba(240,236,228,0.58)', fontSize:14, lineHeight:1.85,
+                marginBottom:28, maxWidth:440, fontWeight:300, animationDelay:'130ms',
+              }}>
+                {featured.overview?.slice(0,180)}{(featured.overview?.length??0)>180?'...':''}
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-                {/* ✅ OPRAVENÉ: v hero zobrazuje iba DSF rating, nie TMDB */}
-                {localPriemery[featured.id] ? (
-                  <span style={{ color: GOLD, fontSize: 13, fontWeight: 600 }}>★ {localPriemery[featured.id].avg.toFixed(1)}</span>
-                ) : null}
-                <span style={{ color: MUTED, fontSize: 13 }}>{featured.release_date?.slice(0, 4)}</span>
+
+              <div className="hero-text" style={{ display:'flex', alignItems:'center', gap:12, marginBottom:32, animationDelay:'170ms' }}>
                 {localPriemery[featured.id] && (
-                  <span style={{ background: 'rgba(232,201,126,0.1)', border: '1px solid rgba(232,201,126,0.2)', color: GOLD, fontSize: 10, padding: '3px 10px', borderRadius: 6 }}>
-                    DSF ★ {localPriemery[featured.id].avg.toFixed(1)}
-                  </span>
+                  <>
+                    <span style={{ color:GOLD2, fontSize:13, fontWeight:500 }}>★ {localPriemery[featured.id].avg.toFixed(1)}</span>
+                    <span style={{ width:3, height:3, borderRadius:'50%', background:MUTED, display:'inline-block' }} />
+                  </>
+                )}
+                <span style={{ color:MUTED, fontSize:12 }}>{featured.release_date?.slice(0,4)}</span>
+                {featured.director && (
+                  <>
+                    <span style={{ width:3, height:3, borderRadius:'50%', background:MUTED, display:'inline-block' }} />
+                    <span style={{ color:MUTED, fontSize:12 }}>réž. {featured.director.name}</span>
+                  </>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button
-                  className="hero-cta"
-                  onClick={() => setRatingModal(featured)}
-                  style={{ padding: '13px 28px', background: GOLD, color: '#000', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans'" }}
-                >Ohodnoť film</button>
-                <button
-                  onClick={() => window.location.href = `/film/${featured.id}`}
-                  style={{ padding: '13px 22px', background: 'rgba(255,255,255,0.07)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans'" }}
-                >Viac info →</button>
+
+              <div className="hero-text" style={{ display:'flex', gap:12, animationDelay:'210ms' }}>
+                <button onClick={() => setModal(featured)} style={{
+                  padding:'14px 32px',
+                  background:`linear-gradient(135deg, ${GOLD}, ${GOLD2})`,
+                  color:'#000', border:'none', borderRadius:14,
+                  fontWeight:600, fontSize:12, cursor:'pointer',
+                  fontFamily:'Outfit, sans-serif', letterSpacing:1,
+                  boxShadow:'0 12px 36px rgba(201,168,76,0.35)',
+                  transition:'all 0.3s', position:'relative', overflow:'hidden',
+                }}>OHODNOŤ</button>
+                <button onClick={() => window.location.href = `/film/${featured.id}`} style={{
+                  padding:'14px 24px',
+                  background:'rgba(255,255,255,0.06)',
+                  backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+                  border:'1px solid rgba(255,255,255,0.12)',
+                  color:'rgba(240,236,228,0.8)', borderRadius:14, cursor:'pointer',
+                  fontSize:12, fontFamily:'Outfit, sans-serif', letterSpacing:1,
+                  transition:'all 0.3s', fontWeight:500,
+                  boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)',
+                }}>DETAIL →</button>
               </div>
             </div>
           )}
 
-          {/* Hero dots */}
-          <div style={{ position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, zIndex: 2 }}>
+          <div style={{ position:'absolute', bottom:110, right:64, zIndex:10, display:'flex', gap:10 }}>
+            <button className="arrow-glass" onClick={() => goTo((heroIdx-1+heroFilms.length)%heroFilms.length)}>←</button>
+            <button className="arrow-glass" onClick={() => goTo((heroIdx+1)%heroFilms.length)}>→</button>
+          </div>
+
+          <div style={{
+            position:'absolute', bottom:48, left:'50%', transform:'translateX(-50%)',
+            display:'flex', gap:8, zIndex:10, alignItems:'center',
+          }}>
             {heroFilms.map((_, i) => (
-              <button key={i} onClick={() => setHeroIdx(i)} style={{
-                width: i === heroIdx ? 28 : 6, height: 6,
-                borderRadius: 3, border: 'none', cursor: 'pointer',
-                background: i === heroIdx ? GOLD : 'rgba(255,255,255,0.22)',
-                transition: 'all 0.4s',
-              }} />
+              <button
+                key={i}
+                className={`hero-dot${i===heroIdx?' active':''}`}
+                onClick={() => goTo(i)}
+                style={{ width: i===heroIdx ? 36 : 8 }}
+              >
+                {i===heroIdx && <div key={heroKey} className="dot-fill" />}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* MAIN */}
-        <div style={{ padding: '60px 40px', maxWidth: 1380, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 36 }}>
+        {/* ── MAIN CONTENT ── */}
+        <div style={{ maxWidth:1360, margin:'0 auto', padding:'72px 48px' }}>
+
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:40 }}>
             <div>
-              <p style={{ color: GOLD, fontSize: 10, letterSpacing: 4, marginBottom: 10, textTransform: 'uppercase' }}>Databáza</p>
-              <h2 style={{ fontFamily: "'Playfair Display'", fontSize: 32, fontWeight: 700, letterSpacing: -0.5 }}>Slovenská kinematografia</h2>
+              <p style={{ color:GOLD, fontSize:9, letterSpacing:5, marginBottom:12, fontWeight:500 }}>DATABÁZA</p>
+              <h2 style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:38, fontWeight:600, letterSpacing:-0.5, lineHeight:1 }}>
+                Slovenská kinematografia
+              </h2>
             </div>
-            <p style={{ color: MUTED, fontSize: 13 }}>{filtered.length} filmov</p>
+            <p style={{ color:MUTED, fontSize:12, letterSpacing:1 }}>{filtered.length} filmov</p>
           </div>
 
-          {/* Search */}
-          <div style={{ position: 'relative', marginBottom: 18 }}>
-            <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', fontSize: 19, pointerEvents: 'none' }}>⌕</span>
+          <div style={{ position:'relative', marginBottom:24 }}>
+            <span style={{ position:'absolute', left:20, top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,0.2)', fontSize:20, pointerEvents:'none' }}>⌕</span>
             <input
-              className="search-box"
+              className="dsf-search"
               type="text"
               placeholder="Hľadaj slovenský film..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{
-                width: '100%', padding: '15px 18px 15px 50px',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 13, color: '#fff', fontSize: 15,
-                outline: 'none', fontFamily: "'DM Sans'", transition: 'all 0.3s',
-              }}
             />
             {search && (
               <button onClick={() => setSearch('')} style={{
-                position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
-                background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%',
-                width: 24, height: 24, color: MUTED, cursor: 'pointer', fontSize: 16,
+                position:'absolute', right:18, top:'50%', transform:'translateY(-50%)',
+                background:'rgba(255,255,255,0.08)', border:'none', borderRadius:'50%',
+                width:28, height:28, color:MUTED, cursor:'pointer', fontSize:18,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all 0.2s',
               }}>×</button>
             )}
           </div>
 
-          {/* Grid */}
           {filtered.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 22 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:20 }}>
               {filtered.map((film, i) => (
                 <FilmCard
-                  key={film.id}
-                  film={film}
+                  key={film.id} film={film}
                   priemer={localPriemery[film.id]}
                   userRating={userRatings[film.id]}
-                  onRate={setRatingModal}
-                  delay={Math.min(i, 12) * 55}
+                  onRate={setModal}
+                  delay={Math.min(i, 16) * 45}
                 />
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '80px 0' }}>
-              <div style={{ fontSize: 44, marginBottom: 14, opacity: 0.25 }}>🎬</div>
-              <p style={{ color: MUTED, fontSize: 15 }}>Žiadne filmy nenájdené</p>
+            <div style={{ textAlign:'center', padding:'80px 0' }}>
+              <div style={{ fontSize:42, marginBottom:14, opacity:0.15 }}>◻</div>
+              <p style={{ color:MUTED, fontSize:14 }}>Žiadne filmy nenájdené</p>
               <button onClick={() => setSearch('')} style={{
-                marginTop: 18, padding: '10px 22px',
-                background: 'rgba(232,201,126,0.1)', border: '1px solid rgba(232,201,126,0.3)',
-                color: GOLD, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans'",
-              }}>Vymazať filter</button>
+                marginTop:16, padding:'10px 22px',
+                background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)',
+                color:GOLD, borderRadius:10, cursor:'pointer', fontSize:12,
+                fontFamily:'Outfit', letterSpacing:1,
+              }}>VYMAZAŤ FILTER</button>
             </div>
           )}
 
-          {/* Stats */}
           <div style={{
-            marginTop: 72, display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: 1, background: 'rgba(255,255,255,0.06)',
-            borderRadius: 16, overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.06)',
+            marginTop:80,
+            display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))',
+            gap:1, borderRadius:22, overflow:'hidden',
+            background:'rgba(255,255,255,0.04)',
+            border:'1px solid rgba(255,255,255,0.06)',
+            backdropFilter:'blur(40px)', WebkitBackdropFilter:'blur(40px)',
+            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)',
           }}>
             {[
-              { label: 'Filmov v databáze', value: filmy.length },
-              { label: 'Hodnotení', value: ratingCount },
-              { label: 'Tvoje priemerné skóre', value: avgScore },
-              { label: 'Slovenských filmov', value: filtered.length },
-            ].map((s, i) => (
-              <div key={i} style={{ textAlign: 'center', padding: '28px 20px', background: 'rgba(255,255,255,0.02)' }}>
-                <p style={{ fontFamily: "'Playfair Display'", fontSize: 30, fontWeight: 700, color: GOLD, marginBottom: 6 }}>{s.value}</p>
-                <p style={{ color: MUTED, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>{s.label}</p>
+              { label:'Filmov v databáze', val:filmy.length },
+              { label:'Celkom hodnotení', val:totalRatings },
+              { label:'Tvoje hodnotenia', val:myRatings || '—' },
+              { label:'Tvoj priemer', val:myAvg },
+            ].map((s,i) => (
+              <div key={i} className="stat-glass">
+                <div style={{
+                  fontFamily:"'Cormorant Garamond', serif",
+                  fontSize:38, fontWeight:600, color:GOLD2, marginBottom:8, lineHeight:1,
+                }}>{s.val}</div>
+                <div style={{ color:MUTED, fontSize:9, letterSpacing:2, textTransform:'uppercase', fontWeight:500 }}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <footer style={{ padding: 40, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontFamily: "'Playfair Display'", fontSize: 18, color: GOLD, letterSpacing: 5 }}>DSF</div>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>Databáza Slovenských Filmov · 2024</p>
+        <footer style={{
+          padding:'36px 48px',
+          borderTop:'1px solid rgba(255,255,255,0.05)',
+          display:'flex', justifyContent:'space-between', alignItems:'center',
+          background:'rgba(255,255,255,0.01)',
+          backdropFilter:'blur(10px)',
+        }}>
+          <div style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:20, color:GOLD2, letterSpacing:8 }}>DSF</div>
+          <p style={{ color:'rgba(255,255,255,0.18)', fontSize:11, letterSpacing:1 }}>DATABÁZA SLOVENSKÝCH FILMOV</p>
         </footer>
       </div>
 
-      {/* Rating Modal */}
-      {ratingModal && (
-        <RatingModal
-          film={ratingModal}
-          onClose={() => setRatingModal(null)}
-          onSave={handleSaveRating}
-        />
+      {/* ── RECENZIE POPUP ── */}
+      {recenzie.length > 0 && popupVisible && currentRecenzia && (
+        <div
+          key={popupMinimized ? 'min' : popupIdx}
+          className={`review-popup ${popupMinimized ? 'minimized' : 'expanded'}`}
+          onClick={() => setPopupMinimized(v => !v)}
+          title={popupMinimized ? 'Klikni pre zobrazenie recenzie' : 'Klikni pre skrytie'}
+        >
+          {popupMinimized ? (
+            /* ── MINIMIZED VIEW ── */
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:14 }}>💬</span>
+              <span style={{ fontSize:11, color:GOLD, letterSpacing:1, fontWeight:500 }}>
+                {currentRecenzia.score}/10
+              </span>
+              <span style={{ fontSize:10, color:MUTED, maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {currentRecenzia.film_title}
+              </span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)', marginLeft:4 }}>▲</span>
+            </div>
+          ) : (
+            /* ── EXPANDED VIEW ── */
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+                <div style={{ width:32, height:32, borderRadius:'50%', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>👤</div>
+                <p style={{ flex:1, fontSize:11, color:'rgba(240,236,228,0.5)', letterSpacing:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{currentRecenzia.film_title}</p>
+                <div style={{ background:'linear-gradient(135deg, #C9A84C, #F0D080)', color:'#000', fontWeight:700, fontSize:12, padding:'3px 9px', borderRadius:8, flexShrink:0 }}>{currentRecenzia.score}/10</div>
+                <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)', flexShrink:0 }}>▼</span>
+              </div>
+              <p style={{ color:'rgba(240,236,228,0.75)', fontSize:12, lineHeight:1.7, fontWeight:300, fontStyle:'italic', display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden' }}>"{currentRecenzia.recenzia}"</p>
+              <div style={{ marginTop:12, height:2, borderRadius:1, background:'rgba(255,255,255,0.06)', overflow:'hidden' }}>
+                <div key={popupIdx} style={{ height:'100%', borderRadius:1, background:'linear-gradient(to right, #C9A84C, #F0D080)', animation:'progressFill 5s linear both' }} />
+              </div>
+            </>
+          )}
+        </div>
       )}
 
-      {/* Toast */}
+      {modal && <RatingModal film={modal} onClose={() => setModal(null)} onSave={handleSave} />}
+
       {toast && (
-        <div className="toast-el" style={{
-          position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(15,15,15,0.98)',
-          border: '1px solid rgba(232,201,126,0.3)',
-          borderRadius: 12, padding: '13px 24px',
-          color: GOLD, fontSize: 14, zIndex: 2000,
-          whiteSpace: 'nowrap', backdropFilter: 'blur(20px)',
+        <div className="dsf-toast" style={{
+          position:'fixed', bottom:32, left:'50%',
+          transform:'translateX(-50%)',
+          background:'rgba(8,8,16,0.92)',
+          backdropFilter:'blur(40px) saturate(200%)', WebkitBackdropFilter:'blur(40px) saturate(200%)',
+          border:'1px solid rgba(201,168,76,0.3)',
+          borderRadius:14, padding:'14px 28px',
+          color:GOLD2, fontSize:13, zIndex:2000, whiteSpace:'nowrap', letterSpacing:0.5,
+          boxShadow:'0 24px 56px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
         }}>✓ {toast}</div>
       )}
     </>

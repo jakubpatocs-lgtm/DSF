@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
 import DSFClient from './DSFClient'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 async function getFilmy() {
   const pages = await Promise.all(
@@ -26,7 +21,7 @@ async function getFilmy() {
       return { ...film, director }
     })
   )
-  return filmyWithCredits
+  return filmyWithCredits.sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0))
 }
 
 async function getHodnotenia() {
@@ -34,8 +29,35 @@ async function getHodnotenia() {
   return data ?? []
 }
 
+async function getRecenzie() {
+  const { data } = await supabase
+    .from('ratings')
+    .select('film_id, film_title, score, recenzia')
+    .not('recenzia', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  return data ?? []
+}
+
+async function getHeroFilmy() {
+  const heroIds = [1107054, 1341775, 1063197, 1406788, 1541444]
+  const heroFilms = await Promise.all(
+    heroIds.map(async (id) => {
+      const [film, credits] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.TMDB_API_KEY}&language=sk`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`https://api.themoviedb.org/3/movie/${id}/credits?api_key=${process.env.TMDB_API_KEY}`, { cache: 'no-store' }).then(r => r.json()),
+      ])
+      const director = credits.crew?.find((c: any) => c.job === 'Director')
+      return { ...film, director }
+    })
+  )
+  return heroFilms
+}
+
 export default async function Home() {
-  const [filmy, hodnotenia] = await Promise.all([getFilmy(), getHodnotenia()])
+  const [filmy, hodnotenia, recenzie, heroFilmy] = await Promise.all([
+    getFilmy(), getHodnotenia(), getRecenzie(), getHeroFilmy()
+  ])
 
   const priemery: { [key: number]: { avg: number; count: number } } = {}
   hodnotenia.forEach((h: any) => {
@@ -47,6 +69,5 @@ export default async function Home() {
     const n = Number(id)
     priemery[n].avg = priemery[n].avg / priemery[n].count
   })
-
-  return <DSFClient filmy={filmy} priemery={priemery} />
+  return <DSFClient filmy={filmy} priemery={priemery} recenzie={recenzie} heroFilmy={heroFilmy} />
 }
