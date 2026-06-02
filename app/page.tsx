@@ -21,7 +21,8 @@ async function getFilmy() {
       return { ...film, director }
     })
   )
-  return filmyWithCredits.sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0))
+  return filmyWithCredits
+  .filter((film, index, self) => index === self.findIndex(f => f.id === film.id))
 }
 
 async function getHodnotenia() {
@@ -69,5 +70,11 @@ export default async function Home() {
     const n = Number(id)
     priemery[n].avg = priemery[n].avg / priemery[n].count
   })
-  return <DSFClient filmy={filmy} priemery={priemery} recenzie={recenzie} heroFilmy={heroFilmy} />
+  const filmySorted = filmy.sort((a, b) => {
+  const countA = priemery[a.id]?.count ?? 0
+  const countB = priemery[b.id]?.count ?? 0
+  return countB - countA
+})
+
+return <DSFClient filmy={filmySorted} priemery={priemery} recenzie={recenzie} heroFilmy={heroFilmy} />
 }

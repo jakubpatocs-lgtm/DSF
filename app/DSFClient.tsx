@@ -559,10 +559,11 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
   const filtered = filmy.filter(f => f.title?.toLowerCase().includes(search.toLowerCase()))
 
   async function handleSave(filmId: number, score: number, recenzia: string) {
-    await supabase.from('ratings').insert({
-      film_id: filmId,
-      film_title: filmy.find(f => f.id === filmId)?.title,
-      score, recenzia: recenzia.trim() || null,
+    const title = filmy.find(f => f.id === filmId)?.title
+    await fetch('/api/rating', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ film_id: filmId, film_title: title, score, recenzia })
     })
     setUserRatings(r => ({ ...r, [filmId]: score }))
     setLocalPriemery(prev => {
@@ -571,11 +572,9 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
       const c = old.count + 1
       return { ...prev, [filmId]: { avg: (old.avg * old.count + score) / c, count: c } }
     })
-    const title = filmy.find(f => f.id === filmId)?.title
     setToast(`"${title}" hodnotené!`)
     setTimeout(() => setToast(null), 3200)
   }
-
   const totalRatings = Object.values(localPriemery).reduce((a, b) => a + b.count, 0)
   const myRatings = Object.keys(userRatings).length
   const myAvg = myRatings
