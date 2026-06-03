@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import pool from '../lib/db'
 import DSFClient from './DSFClient'
 
 async function getFilmy() {
@@ -22,22 +22,24 @@ async function getFilmy() {
     })
   )
   return filmyWithCredits
-  .filter((film, index, self) => index === self.findIndex(f => f.id === film.id))
+    .filter((film, index, self) => index === self.findIndex(f => f.id === film.id))
 }
 
 async function getHodnotenia() {
-  const { data } = await supabase.from('ratings').select('film_id, score')
-  return data ?? []
+  const result = await pool.query('SELECT film_id, score FROM ratings')
+  return result.rows ?? []
 }
 
 async function getRecenzie() {
-  const { data } = await supabase
-    .from('ratings')
-    .select('film_id, film_title, score, recenzia')
-    .not('recenzia', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(20)
-  return data ?? []
+  const result = await pool.query(`
+    SELECT r.film_id, f.title as film_title, r.score, r.recenzia
+    FROM ratings r
+    JOIN films f ON r.film_id = f.id
+    WHERE r.recenzia IS NOT NULL AND r.recenzia != ''
+    ORDER BY r.created_at DESC
+    LIMIT 20
+  `)
+  return result.rows ?? []
 }
 
 async function getHeroFilmy() {
@@ -70,11 +72,12 @@ export default async function Home() {
     const n = Number(id)
     priemery[n].avg = priemery[n].avg / priemery[n].count
   })
-  const filmySorted = filmy.sort((a, b) => {
-  const countA = priemery[a.id]?.count ?? 0
-  const countB = priemery[b.id]?.count ?? 0
-  return countB - countA
-})
 
-return <DSFClient filmy={filmySorted} priemery={priemery} recenzie={recenzie} heroFilmy={heroFilmy} />
+  const filmySorted = filmy.sort((a, b) => {
+    const countA = priemery[a.id]?.count ?? 0
+    const countB = priemery[b.id]?.count ?? 0
+    return countB - countA
+  })
+
+  return <DSFClient filmy={filmySorted} priemery={priemery} recenzie={recenzie} heroFilmy={heroFilmy} />
 }
