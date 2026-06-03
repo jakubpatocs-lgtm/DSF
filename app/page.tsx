@@ -22,7 +22,9 @@ async function getFilmy() {
     })
   )
   return filmyWithCredits
-    .filter((film, index, self) => index === self.findIndex(f => f.id === film.id))
+    .filter((film, index, self) => 
+  index === self.findIndex(f => f.id === film.id || f.title === film.title)
+)
 }
 
 async function getHodnotenia() {
