@@ -23,7 +23,11 @@ async function getFilmy() {
   )
   return filmyWithCredits
     .filter((film, index, self) => 
-  index === self.findIndex(f => f.id === film.id || f.title === film.title)
+  index === self.findIndex(f => 
+    f.id === film.id || 
+    f.title === film.title ||
+    f.original_title === film.original_title
+  )
 )
 }
 
