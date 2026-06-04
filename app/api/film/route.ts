@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
   try {
-    const { id } = params
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'Chýba id' }, { status: 400 })
+    
     const [film, credits] = await Promise.all([
       fetch(
         `https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos&language=sk`,
@@ -20,6 +20,6 @@ export async function GET(
     const cast = credits.cast?.slice(0, 12) ?? []
     return NextResponse.json({ ...film, director, cast })
   } catch (error) {
-    return NextResponse.json({ error: 'Chyba pri načítaní filmu' }, { status: 500 })
+    return NextResponse.json({ error: 'Chyba' }, { status: 500 })
   }
 }
