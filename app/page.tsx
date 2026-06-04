@@ -5,7 +5,7 @@ async function getFilmy() {
   const pages = await Promise.all(
     [1,2,3,4,5,6,7,8,9,10].map(page =>
       fetch(
-        `https://api.themoviedb.org/3/discover/movie?with_origin_country=SK&sort_by=popularity.desc&api_key=${process.env.TMDB_API_KEY}&page=${page}`,
+        `https://api.themoviedb.org/3/discover/movie?with_origin_country=SK&sort_by=popularity.desc&api_key=${process.env.TMDB_API_KEY}&page=${page}&language=sk`,
         { cache: 'no-store' }
       ).then(res => res.json())
     )
@@ -22,13 +22,7 @@ async function getFilmy() {
     })
   )
   return filmyWithCredits
-    .filter((film, index, self) => 
-  index === self.findIndex(f => 
-    f.id === film.id || 
-    f.title === film.title ||
-    f.original_title === film.original_title
-  )
-)
+    .filter((film, index, self) => index === self.findIndex(f => f.id === film.id))
 }
 
 async function getHodnotenia() {

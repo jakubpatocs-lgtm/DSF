@@ -1,3 +1,5 @@
+import Nav from '../../Nav'
+
 const GOLD = '#C9A84C'
 const GOLD2 = '#F0D080'
 const MUTED = 'rgba(255,255,255,0.38)'
@@ -18,16 +20,30 @@ const css = `
     10%  { opacity:1; } 90%  { opacity:1; }
     100% { transform:translateX(220%) skewX(-20deg); opacity:0; }
   }
-  @keyframes shimmerPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
 
-  .back-link {
-    color:${MUTED}; text-decoration:none; font-size:12px; letter-spacing:2px;
+  .back-btn {
+    color:${MUTED}; text-decoration:none; font-size:11px; letter-spacing:2px;
     transition:all 0.25s; display:inline-flex; align-items:center; gap:8px;
-    padding:8px 16px; border-radius:100px;
-    border:1px solid rgba(255,255,255,0.07);
-    background:rgba(255,255,255,0.03); backdrop-filter:blur(20px);
+    padding:8px 18px; border-radius:100px;
+    border:1px solid rgba(255,255,255,0.08);
+    background:rgba(255,255,255,0.03);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    position:relative; overflow:hidden;
   }
-  .back-link:hover { color:#f0ece4; border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); }
+  .back-btn::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent);
+    transform:translateX(-100%);
+  }
+  .back-btn:hover {
+    color:#f0ece4;
+    border-color:rgba(201,168,76,0.3);
+    background:rgba(201,168,76,0.06);
+    transform:translateY(-1px);
+    box-shadow:0 8px 24px rgba(0,0,0,0.3);
+  }
+  .back-btn:hover::before { animation:lightSweep 0.6s ease forwards; }
 
   .wiki-btn {
     display:inline-flex; align-items:center; gap:8px;
@@ -41,17 +57,11 @@ const css = `
     position:relative; overflow:hidden;
     box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);
   }
-  .wiki-btn::before {
-    content:''; position:absolute; inset:0;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
-    transform:translateX(-100%);
-  }
   .wiki-btn:hover {
     background:rgba(201,168,76,0.16); border-color:rgba(201,168,76,0.45);
     transform:translateY(-2px);
     box-shadow:0 10px 28px rgba(201,168,76,0.18), inset 0 1px 0 rgba(255,255,255,0.15);
   }
-  .wiki-btn:hover::before { animation:lightSweep 0.7s ease forwards; }
 
   .film-item {
     text-decoration:none; color:#f0ece4;
@@ -69,9 +79,7 @@ const css = `
     transition:all 0.4s;
   }
   .fi-wrap { position:relative; overflow:hidden; border-radius:14px; }
-  .fi-sweep {
-    position:absolute; inset:0; pointer-events:none;
-  }
+  .fi-sweep { position:absolute; inset:0; pointer-events:none; }
   .fi-sweep::after {
     content:'';
     position:absolute; inset:0;
@@ -139,44 +147,29 @@ export default async function ReziserPage({ params }: { params: Promise<{ id: st
     <div style={{ background:'#04040a', minHeight:'100vh', color:'#f0ece4' }}>
       <style>{css}</style>
 
-      {/* NAV */}
-      <nav style={{
-        position:'sticky', top:0, zIndex:200,
-        padding:'0 48px', height:64,
-        display:'flex', justifyContent:'space-between', alignItems:'center',
-        background:'rgba(4,4,10,0.75)',
-        backdropFilter:'blur(40px) saturate(200%)',
-        WebkitBackdropFilter:'blur(40px) saturate(200%)',
-        borderBottom:'1px solid rgba(255,255,255,0.06)',
-        boxShadow:'0 1px 0 rgba(201,168,76,0.06)',
-      }}>
-        <a href="/" style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, color:GOLD2, letterSpacing:8, textDecoration:'none', textShadow:`0 0 30px rgba(201,168,76,0.4)` }}>DSF</a>
-        <a href="/" className="back-link">← SPÄŤ</a>
-      </nav>
+      <Nav />
 
-      <div style={{ maxWidth:1100, margin:'0 auto', padding:'64px 48px 80px' }}>
+      <div style={{ maxWidth:1100, margin:'0 auto', padding:'clamp(32px,5vw,48px) clamp(16px,4vw,48px) 80px' }}>
+
+        {/* BACK BUTTON */}
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:32 }}>
+          <a href="/reziseri" className="back-btn">
+            REŽISÉRI →
+          </a>
+        </div>
 
         {/* HEADER */}
-        <div style={{ display:'flex', gap:52, marginBottom:64, animation:'fadeUp 0.7s ease both' }}>
+        <div style={{ display:'flex', gap:'clamp(24px,4vw,52px)', marginBottom:64, animation:'fadeUp 0.7s ease both', flexWrap:'wrap' }}>
 
-          {/* Photo */}
           <div style={{ flexShrink:0 }}>
             {foto ? (
               <div style={{ position:'relative' }}>
                 <img src={foto} alt={reziser.name} style={{
-                  width:210, height:295, objectFit:'cover',
-                  borderRadius:20,
+                  width:'clamp(150px,18vw,210px)', height:'clamp(210px,25vw,295px)',
+                  objectFit:'cover', borderRadius:20,
                   boxShadow:'0 48px 96px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08)',
                   display:'block',
                 }} />
-                {/* Highlight */}
-                <div style={{
-                  position:'absolute', top:0, left:0, right:0,
-                  height:'40%', borderRadius:'20px 20px 0 0',
-                  background:'linear-gradient(to bottom, rgba(255,255,255,0.06), transparent)',
-                  pointerEvents:'none',
-                }} />
-                {/* Gold line */}
                 <div style={{
                   position:'absolute', bottom:-12, left:20, right:20,
                   height:3, borderRadius:2,
@@ -195,23 +188,20 @@ export default async function ReziserPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          {/* Info */}
-          <div style={{ flex:1, paddingTop:8 }}>
+          <div style={{ flex:1, minWidth:0, paddingTop:8 }}>
             <p style={{ color:GOLD, fontSize:9, letterSpacing:5, marginBottom:14, fontWeight:500 }}>REŽISÉR</p>
             <h1 style={{
               fontFamily:"'Cormorant Garamond',serif",
-              fontSize:'clamp(32px,4.5vw,58px)',
+              fontSize:'clamp(28px,4.5vw,58px)',
               fontWeight:600, lineHeight:1.0, marginBottom:24, letterSpacing:-1,
             }}>{reziser.name}</h1>
 
-            {/* Pills */}
             <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:28 }}>
               {reziser.birthday && <span className="meta-pill">🎂 {reziser.birthday}{age ? ` · ${age} rokov` : ''}</span>}
               {reziser.place_of_birth && <span className="meta-pill">📍 {reziser.place_of_birth}</span>}
               {filmy.length > 0 && <span className="meta-pill-gold">🎬 {filmy.length} filmov</span>}
             </div>
 
-            {/* Bio */}
             {bio ? (
               <>
                 <p style={{
@@ -234,10 +224,8 @@ export default async function ReziserPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {/* DIVIDER */}
         <div style={{ height:1, marginBottom:52, background:`linear-gradient(to right, rgba(201,168,76,0.3), transparent)` }} />
 
-        {/* FILMOGRAFIA */}
         <div style={{ animation:'fadeUp 0.6s ease 0.15s both' }}>
           <p style={{ color:GOLD, fontSize:9, letterSpacing:5, marginBottom:10, fontWeight:500 }}>FILMOGRAFIA</p>
           <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:600, marginBottom:40 }}>Réžia</h2>
@@ -245,7 +233,7 @@ export default async function ReziserPage({ params }: { params: Promise<{ id: st
           {filmy.length === 0 ? (
             <p style={{ color:MUTED }}>Žiadne filmy nenájdené.</p>
           ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(155px, 1fr))', gap:24 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(clamp(120px,14vw,155px), 1fr))', gap:24 }}>
               {filmy.map((film:any, i:number) => (
                 <a key={film.credit_id} href={`/film/${film.id}`} className="film-item"
                   style={{ animation:`fadeUp 0.5s ease ${Math.min(i,14)*45}ms both` }}

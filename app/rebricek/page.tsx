@@ -15,11 +15,6 @@ const css = `
     from { opacity:0; transform:translateY(24px); filter:blur(3px); }
     to   { opacity:1; transform:translateY(0); filter:blur(0); }
   }
-  @keyframes lightSweep {
-    0%   { transform:translateX(-120%) skewX(-20deg); opacity:0; }
-    10%  { opacity:1; } 90% { opacity:1; }
-    100% { transform:translateX(220%) skewX(-20deg); opacity:0; }
-  }
   @keyframes numberReveal {
     from { opacity:0; transform:scale(0.6) translateY(10px); }
     to   { opacity:1; transform:scale(1) translateY(0); }
@@ -70,36 +65,38 @@ const css = `
 
 async function getRebricek() {
   const result = await pool.query(`
-    SELECT f.id as film_id, f.title,
+    SELECT f.id as film_id,
            AVG(r.score) as average,
            COUNT(r.id) as count
     FROM films f
     JOIN ratings r ON r.film_id = f.id
-    GROUP BY f.id, f.title
+    GROUP BY f.id
     ORDER BY average DESC
   `)
 
-  const rebricek = result.rows.map((r: any) => ({
-    film_id: r.film_id,
-    title: r.title,
-    average: parseFloat(r.average),
-    count: parseInt(r.count),
-  }))
-
-  const withPosters = await Promise.all(rebricek.map(async film => {
+  const withData = await Promise.all(result.rows.map(async (r: any) => {
     try {
       const res = await fetch(
-        `https://api.themoviedb.org/3/movie/${film.film_id}?api_key=${process.env.TMDB_API_KEY}`,
+        `https://api.themoviedb.org/3/movie/${r.film_id}?api_key=${process.env.TMDB_API_KEY}&language=sk`,
         { cache: 'no-store' }
       )
       const d = await res.json()
-      return { ...film, poster_path: d.poster_path }
+
+      if (!d.origin_country?.includes('SK')) return null
+
+      return {
+        film_id: r.film_id,
+        title: d.title || d.original_title || 'Neznámy film',
+        average: parseFloat(r.average),
+        count: parseInt(r.count),
+        poster_path: d.poster_path,
+      }
     } catch {
-      return { ...film, poster_path: null }
+      return null
     }
   }))
 
-  return withPosters
+  return withData.filter((f): f is NonNullable<typeof f> => f !== null)
 }
 
 export default async function Rebricek() {
@@ -111,7 +108,6 @@ export default async function Rebricek() {
       <style>{css}</style>
       <Nav />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(80px,10vw,96px) clamp(16px,4vw,48px) 80px' }}>
-
         <div style={{ marginBottom: 56, animation: 'fadeUp 0.7s ease both' }}>
           <p style={{ color: GOLD, fontSize: 9, letterSpacing: 5, marginBottom: 12, fontWeight: 500 }}>TOP HODNOTENIA</p>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 'clamp(36px,5vw,60px)', fontWeight: 600, letterSpacing: -1, lineHeight: 1, marginBottom: 16 }}>
@@ -145,9 +141,7 @@ export default async function Rebricek() {
               </div>
 
               {film.poster_path ? (
-                <img
-                  src={`https://image.tmdb.org/t/p/w200${film.poster_path}`}
-                  alt={film.title}
+                <img src={`https://image.tmdb.org/t/p/w200${film.poster_path}`} alt={film.title}
                   style={{ width: 54, height: 80, objectFit: 'cover', borderRadius: 10, flexShrink: 0, border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}
                 />
               ) : (

@@ -13,7 +13,7 @@ const css = `
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
   html { scroll-behavior:smooth; }
   body {
-    background: #003300;
+    background: #000000;
     color: #f0ece4;
     font-family: 'Outfit', sans-serif;
     overflow-x: hidden;
