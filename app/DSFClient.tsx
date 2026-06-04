@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
 import Nav from './Nav'
 
 const GOLD = '#C9A84C'
@@ -72,10 +71,6 @@ const css = `
   @keyframes reviewIn {
     from { opacity:0; transform:translateX(40px) scale(0.92); filter:blur(4px); }
     to   { opacity:1; transform:translateX(0) scale(1); filter:blur(0); }
-  }
-  @keyframes popupMinimize {
-    from { opacity:1; transform:scale(1) translateY(0); }
-    to   { opacity:1; transform:scale(1) translateY(0); }
   }
 
   .glass-1 {
@@ -165,19 +160,12 @@ const css = `
     transition: all 0.35s cubic-bezier(0.34,1.2,0.64,1);
     position: relative; overflow: hidden;
   }
-  .fc .fc-rate::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-    transform: translateX(-100%);
-  }
   .fc:hover .fc-rate { opacity: 1; transform: translateY(0); }
   .fc:hover .fc-rate:hover {
     background: rgba(201,168,76,0.2);
     border-color: rgba(201,168,76,0.5);
     transform: translateY(-1px);
   }
-  .fc:hover .fc-rate:hover::before { animation: lightSweep 0.6s ease forwards; }
 
   .sb {
     transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
@@ -198,20 +186,13 @@ const css = `
     transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
     position: relative; overflow: hidden;
   }
-  .arrow-glass::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
-    opacity: 0; transition: opacity 0.3s;
-  }
   .arrow-glass:hover {
     background: rgba(201,168,76,0.15);
     border-color: rgba(201,168,76,0.45);
     color: ${GOLD2};
     transform: scale(1.1);
-    box-shadow: 0 0 30px rgba(201,168,76,0.2), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow: 0 0 30px rgba(201,168,76,0.2), 0 8px 32px rgba(0,0,0,0.4);
   }
-  .arrow-glass:hover::before { opacity: 1; }
   .arrow-glass:active { transform: scale(0.94); }
 
   .dsf-search {
@@ -251,13 +232,6 @@ const css = `
     position: relative; overflow: hidden;
     transition: all 0.4s ease;
   }
-  .stat-glass::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(circle at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 70%);
-    opacity: 0; transition: opacity 0.4s;
-  }
-  .stat-glass:hover::before { opacity: 1; }
   .stat-glass:hover { background: rgba(255,255,255,0.04); }
 
   .modal-bg { animation: fadeIn 0.25s ease; }
@@ -273,16 +247,10 @@ const css = `
     border: 1px solid rgba(255,255,255,0.35);
     border-radius: 8px; padding: 5px 9px;
     font-size: 11px; font-weight: 600; color: #000;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     overflow: hidden;
   }
-  .rating-badge::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 60%);
-  }
 
-  /* ── POPUP ── */
   .review-popup {
     position: fixed; right: 32px; bottom: 80px; z-index: 400;
     background: rgba(8,6,18,0.85);
@@ -296,20 +264,46 @@ const css = `
     transition: all 0.4s cubic-bezier(0.34,1.1,0.64,1);
     overflow: hidden;
   }
-  .review-popup.expanded {
-    width: 300px;
-    padding: 18px 20px;
-  }
+  .review-popup.expanded { width: 300px; padding: 18px 20px; }
   .review-popup.minimized {
-    width: auto;
-    padding: 10px 16px;
-    border-radius: 100px;
-    background: rgba(8,6,18,0.92);
-    border-color: rgba(201,168,76,0.25);
+    width: auto; padding: 10px 16px; border-radius: 100px;
+    background: rgba(8,6,18,0.92); border-color: rgba(201,168,76,0.25);
   }
   .review-popup:hover {
     border-color: rgba(201,168,76,0.3);
     box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 20px rgba(201,168,76,0.08), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+
+  /* ── MOBILE RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .hero-wrapper { height: 100svh; }
+
+    .fc:hover { transform: none; }
+    .fc .fc-info { opacity: 1 !important; transform: translateY(0) !important; }
+    .fc .fc-rate { opacity: 1 !important; transform: translateY(0) !important; }
+    .fc:hover .fc-img { box-shadow: none; }
+
+    .arrow-glass { width: 40px; height: 40px; font-size: 14px; }
+
+    .review-popup.expanded {
+      width: calc(100vw - 32px) !important;
+      right: 16px !important;
+      bottom: 70px !important;
+    }
+    .review-popup.minimized {
+      right: 16px !important;
+      bottom: 70px !important;
+    }
+
+    .modal-box {
+      padding: 28px 20px !important;
+      border-radius: 20px !important;
+      margin: 0 8px;
+    }
+
+    .dsf-search { font-size: 16px; padding: 14px 20px 14px 48px; }
+
+    .stat-glass { padding: 20px 12px; }
   }
 `
 
@@ -355,11 +349,6 @@ function RatingModal({ film, onClose, onSave }: {
           position: 'relative', overflow: 'hidden',
         }}
       >
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-          background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent)',
-        }} />
-
         {done ? (
           <div style={{ textAlign: 'center', padding: '24px 0' }}>
             <div style={{
@@ -386,7 +375,7 @@ function RatingModal({ film, onClose, onSave }: {
                   color: score===n ? GOLD2 : MUTED,
                   fontWeight: 600, fontSize: 13, cursor: 'pointer',
                   backdropFilter: 'blur(10px)',
-                  boxShadow: score===n ? `0 0 20px rgba(201,168,76,0.25), inset 0 1px 0 rgba(255,255,255,0.15)` : 'none',
+                  boxShadow: score===n ? `0 0 20px rgba(201,168,76,0.25)` : 'none',
                 }}>{n}</button>
               ))}
             </div>
@@ -402,7 +391,6 @@ function RatingModal({ film, onClose, onSave }: {
                     borderRadius: 14, color: '#f0ece4', fontSize: 13, resize: 'none',
                     outline: 'none', fontFamily: 'Outfit, sans-serif', lineHeight: 1.7,
                     boxSizing: 'border-box', backdropFilter: 'blur(10px)',
-                    transition: 'border-color 0.3s',
                   }}
                 />
               </div>
@@ -418,7 +406,6 @@ function RatingModal({ film, onClose, onSave }: {
                 fontFamily: 'Outfit, sans-serif', letterSpacing: 0.5,
                 boxShadow: score ? '0 8px 24px rgba(201,168,76,0.3)' : 'none',
                 transition: 'all 0.3s',
-                position: 'relative', overflow: 'hidden',
               }}>
                 {saving ? '...' : 'Uložiť'}
               </button>
@@ -427,7 +414,7 @@ function RatingModal({ film, onClose, onSave }: {
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
                 color: MUTED, borderRadius: 14, cursor: 'pointer',
                 fontSize: 13, fontFamily: 'Outfit, sans-serif',
-                backdropFilter: 'blur(10px)', transition: 'all 0.2s',
+                backdropFilter: 'blur(10px)',
               }}>Zrušiť</button>
             </div>
           </>
@@ -453,7 +440,7 @@ function FilmCard({ film, priemer, userRating, onRate, delay }: {
     >
       <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden' }}>
         {film.poster_path || film.backdrop_path ? (
-          <img className="fc-img" src={`https://image.tmdb.org/t/p/w300${film.poster_path || film.backdrop_path}`} alt={film.title} />
+          <img className="fc-img" src={`https://image.tmdb.org/t/p/w300${film.poster_path || film.backdrop_path}`} alt={film.title} loading="lazy" decoding="async" />
         ) : (
           <div style={{ width:'100%', aspectRatio:'2/3', background:'rgba(255,255,255,0.03)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
             <span style={{ fontSize:32, opacity:0.2 }}>🎬</span>
@@ -499,12 +486,11 @@ function FilmCard({ film, priemer, userRating, onRate, delay }: {
 }
 
 /* ─────────────── MAIN ─────────────── */
-export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], heroFilmy, requireAuth = false }: {
+export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], heroFilmy }: {
   filmy: any[]
   priemery: { [key: number]: { avg: number; count: number } }
   recenzie?: { film_id: number; film_title: string; score: number; recenzia: string }[]
   heroFilmy?: any[]
-  requireAuth?: boolean
 }) {
   const [search, setSearch] = useState('')
   const [heroIdx, setHeroIdx] = useState(0)
@@ -518,6 +504,7 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
   const [popupVisible, setPopupVisible] = useState(true)
   const [popupMinimized, setPopupMinimized] = useState(false)
   const intervalRef2 = useRef<any>(null)
+  const [zobrazených, setZobrazených] = useState(20)
 
   const heroFilms = heroFilmy && heroFilmy.length > 0
     ? heroFilmy
@@ -557,6 +544,7 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
   }, [recenzie.length, popupMinimized])
 
   const filtered = filmy.filter(f => f.title?.toLowerCase().includes(search.toLowerCase()))
+  const viditelne = filtered.slice(0, zobrazených)
 
   async function handleSave(filmId: number, score: number, recenzia: string) {
     const title = filmy.find(f => f.id === filmId)?.title
@@ -575,6 +563,7 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
     setToast(`"${title}" hodnotené!`)
     setTimeout(() => setToast(null), 3200)
   }
+
   const totalRatings = Object.values(localPriemery).reduce((a, b) => a + b.count, 0)
   const myRatings = Object.keys(userRatings).length
   const myAvg = myRatings
@@ -586,7 +575,6 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
   return (
     <>
       <style>{css}</style>
-
       <Nav count={filmy.length} />
 
       <div style={{ background: '#04040a', minHeight: '100vh' }}>
@@ -616,14 +604,14 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
           <div style={{ position:'absolute', inset:0, zIndex:2, background:'linear-gradient(110deg, rgba(4,4,10,0.98) 0%, rgba(4,4,10,0.65) 50%, rgba(4,4,10,0.2) 100%)' }} />
           <div style={{ position:'absolute', inset:0, zIndex:2, background:'linear-gradient(to top, rgba(4,4,10,1) 0%, transparent 45%)' }} />
 
-          <div style={{
-            position:'absolute', inset:0, zIndex:3, pointerEvents:'none', opacity:0.025,
-            backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-            backgroundSize: '200px',
-          }} />
-
           {featured && (
-            <div key={heroKey} style={{ position:'absolute', bottom:110, left:64, maxWidth:580, zIndex:10 }}>
+            <div key={heroKey} style={{
+              position:'absolute',
+              bottom:'clamp(80px, 12vh, 110px)',
+              left:'clamp(20px, 5vw, 64px)',
+              maxWidth:'min(580px, calc(100vw - 40px))',
+              zIndex:10,
+            }}>
               <div className="hero-text" style={{ animationDelay:'0ms' }}>
                 <div style={{
                   display:'inline-flex', alignItems:'center', gap:8,
@@ -640,15 +628,16 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
 
               <h1 className="hero-text" style={{
                 fontFamily:"'Cormorant Garamond', serif",
-                fontSize:'clamp(36px,5.5vw,68px)',
+                fontSize:'clamp(28px,5.5vw,68px)',
                 fontWeight:600, lineHeight:1.0, letterSpacing:-1,
                 marginBottom:20, animationDelay:'70ms',
                 textShadow:'0 2px 40px rgba(0,0,0,0.5)',
               }}>{featured.title}</h1>
 
               <p className="hero-text" style={{
-                color:'rgba(240,236,228,0.58)', fontSize:14, lineHeight:1.85,
+                color:'rgba(240,236,228,0.58)', fontSize:'clamp(12px,1.5vw,14px)', lineHeight:1.85,
                 marginBottom:28, maxWidth:440, fontWeight:300, animationDelay:'130ms',
+                display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden',
               }}>
                 {featured.overview?.slice(0,180)}{(featured.overview?.length??0)>180?'...':''}
               </p>
@@ -671,29 +660,33 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
 
               <div className="hero-text" style={{ display:'flex', gap:12, animationDelay:'210ms' }}>
                 <button onClick={() => setModal(featured)} style={{
-                  padding:'14px 32px',
+                  padding:'clamp(10px,2vw,14px) clamp(20px,3vw,32px)',
                   background:`linear-gradient(135deg, ${GOLD}, ${GOLD2})`,
                   color:'#000', border:'none', borderRadius:14,
                   fontWeight:600, fontSize:12, cursor:'pointer',
                   fontFamily:'Outfit, sans-serif', letterSpacing:1,
                   boxShadow:'0 12px 36px rgba(201,168,76,0.35)',
-                  transition:'all 0.3s', position:'relative', overflow:'hidden',
+                  transition:'all 0.3s',
                 }}>OHODNOŤ</button>
                 <button onClick={() => window.location.href = `/film/${featured.id}`} style={{
-                  padding:'14px 24px',
+                  padding:'clamp(10px,2vw,14px) clamp(16px,2vw,24px)',
                   background:'rgba(255,255,255,0.06)',
                   backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
                   border:'1px solid rgba(255,255,255,0.12)',
                   color:'rgba(240,236,228,0.8)', borderRadius:14, cursor:'pointer',
                   fontSize:12, fontFamily:'Outfit, sans-serif', letterSpacing:1,
                   transition:'all 0.3s', fontWeight:500,
-                  boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)',
                 }}>DETAIL →</button>
               </div>
             </div>
           )}
 
-          <div style={{ position:'absolute', bottom:110, right:64, zIndex:10, display:'flex', gap:10 }}>
+          <div style={{
+            position:'absolute',
+            bottom:'clamp(80px, 12vh, 110px)',
+            right:'clamp(16px, 4vw, 64px)',
+            zIndex:10, display:'flex', gap:10,
+          }}>
             <button className="arrow-glass" onClick={() => goTo((heroIdx-1+heroFilms.length)%heroFilms.length)}>←</button>
             <button className="arrow-glass" onClick={() => goTo((heroIdx+1)%heroFilms.length)}>→</button>
           </div>
@@ -716,12 +709,15 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
         </div>
 
         {/* ── MAIN CONTENT ── */}
-        <div style={{ maxWidth:1360, margin:'0 auto', padding:'72px 48px' }}>
+        <div style={{
+          maxWidth:1360, margin:'0 auto',
+          padding:'clamp(40px, 6vw, 72px) clamp(16px, 4vw, 48px)',
+        }}>
 
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:40 }}>
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:40, flexWrap:'wrap', gap:16 }}>
             <div>
               <p style={{ color:GOLD, fontSize:9, letterSpacing:5, marginBottom:12, fontWeight:500 }}>DATABÁZA</p>
-              <h2 style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:38, fontWeight:600, letterSpacing:-0.5, lineHeight:1 }}>
+              <h2 style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:'clamp(24px,4vw,38px)', fontWeight:600, letterSpacing:-0.5, lineHeight:1 }}>
                 Slovenská kinematografia
               </h2>
             </div>
@@ -735,7 +731,7 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
               type="text"
               placeholder="Hľadaj slovenský film..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setZobrazených(20) }}
             />
             {search && (
               <button onClick={() => setSearch('')} style={{
@@ -743,23 +739,43 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
                 background:'rgba(255,255,255,0.08)', border:'none', borderRadius:'50%',
                 width:28, height:28, color:MUTED, cursor:'pointer', fontSize:18,
                 display:'flex', alignItems:'center', justifyContent:'center',
-                transition:'all 0.2s',
               }}>×</button>
             )}
           </div>
 
           {filtered.length > 0 ? (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:20 }}>
-              {filtered.map((film, i) => (
-                <FilmCard
-                  key={film.id} film={film}
-                  priemer={localPriemery[film.id]}
-                  userRating={userRatings[film.id]}
-                  onRate={setModal}
-                  delay={Math.min(i, 16) * 45}
-                />
-              ))}
-            </div>
+            <>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:20 }}>
+                {viditelne.map((film, i) => (
+                  <FilmCard
+                    key={film.id} film={film}
+                    priemer={localPriemery[film.id]}
+                    userRating={userRatings[film.id]}
+                    onRate={setModal}
+                    delay={Math.min(i, 16) * 45}
+                  />
+                ))}
+              </div>
+              {zobrazených < filtered.length && (
+                <div style={{ textAlign:'center', marginTop:40 }}>
+                  <button
+                    onClick={() => setZobrazených(z => z + 20)}
+                    style={{
+                      padding:'14px 40px',
+                      background:'rgba(201,168,76,0.08)',
+                      backdropFilter:'blur(20px)',
+                      border:'1px solid rgba(201,168,76,0.25)',
+                      color:GOLD2, borderRadius:14,
+                      cursor:'pointer', fontSize:12,
+                      fontFamily:'Outfit', letterSpacing:2,
+                      transition:'all 0.3s',
+                    }}
+                  >
+                    NAČÍTAŤ ĎALŠIE ({filtered.length - zobrazených} zostáva)
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div style={{ textAlign:'center', padding:'80px 0' }}>
               <div style={{ fontSize:42, marginBottom:14, opacity:0.15 }}>◻</div>
@@ -775,12 +791,11 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
 
           <div style={{
             marginTop:80,
-            display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))',
+            display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',
             gap:1, borderRadius:22, overflow:'hidden',
             background:'rgba(255,255,255,0.04)',
             border:'1px solid rgba(255,255,255,0.06)',
             backdropFilter:'blur(40px)', WebkitBackdropFilter:'blur(40px)',
-            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)',
           }}>
             {[
               { label:'Filmov v databáze', val:filmy.length },
@@ -791,7 +806,7 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
               <div key={i} className="stat-glass">
                 <div style={{
                   fontFamily:"'Cormorant Garamond', serif",
-                  fontSize:38, fontWeight:600, color:GOLD2, marginBottom:8, lineHeight:1,
+                  fontSize:'clamp(28px,4vw,38px)', fontWeight:600, color:GOLD2, marginBottom:8, lineHeight:1,
                 }}>{s.val}</div>
                 <div style={{ color:MUTED, fontSize:9, letterSpacing:2, textTransform:'uppercase', fontWeight:500 }}>{s.label}</div>
               </div>
@@ -800,9 +815,10 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
         </div>
 
         <footer style={{
-          padding:'36px 48px',
+          padding:'36px clamp(16px, 4vw, 48px)',
           borderTop:'1px solid rgba(255,255,255,0.05)',
           display:'flex', justifyContent:'space-between', alignItems:'center',
+          flexWrap:'wrap', gap:12,
           background:'rgba(255,255,255,0.01)',
           backdropFilter:'blur(10px)',
         }}>
@@ -817,22 +833,15 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
           key={popupMinimized ? 'min' : popupIdx}
           className={`review-popup ${popupMinimized ? 'minimized' : 'expanded'}`}
           onClick={() => setPopupMinimized(v => !v)}
-          title={popupMinimized ? 'Klikni pre zobrazenie recenzie' : 'Klikni pre skrytie'}
         >
           {popupMinimized ? (
-            /* ── MINIMIZED VIEW ── */
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontSize:14 }}>💬</span>
-              <span style={{ fontSize:11, color:GOLD, letterSpacing:1, fontWeight:500 }}>
-                {currentRecenzia.score}/10
-              </span>
-              <span style={{ fontSize:10, color:MUTED, maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {currentRecenzia.film_title}
-              </span>
+              <span style={{ fontSize:11, color:GOLD, letterSpacing:1, fontWeight:500 }}>{currentRecenzia.score}/10</span>
+              <span style={{ fontSize:10, color:MUTED, maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{currentRecenzia.film_title}</span>
               <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)', marginLeft:4 }}>▲</span>
             </div>
           ) : (
-            /* ── EXPANDED VIEW ── */
             <>
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
                 <div style={{ width:32, height:32, borderRadius:'50%', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>👤</div>
@@ -860,7 +869,7 @@ export default function DSFClient({ filmy = [], priemery = {}, recenzie = [], he
           border:'1px solid rgba(201,168,76,0.3)',
           borderRadius:14, padding:'14px 28px',
           color:GOLD2, fontSize:13, zIndex:2000, whiteSpace:'nowrap', letterSpacing:0.5,
-          boxShadow:'0 24px 56px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
+          boxShadow:'0 24px 56px rgba(0,0,0,0.6)',
         }}>✓ {toast}</div>
       )}
     </>
